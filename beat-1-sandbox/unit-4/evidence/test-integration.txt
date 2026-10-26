@@ -1,0 +1,51 @@
+$ make test-integration
+.venv/bin/pytest tests/integration -v -m integration
+============================= test session starts ==============================
+platform darwin -- Python 3.11.15, pytest-9.1.1, pluggy-1.7.0 -- /Users/aryahb/Downloads/pathreview-ai301-fa26-s3/.venv/bin/python
+cachedir: .pytest_cache
+hypothesis profile 'default'
+benchmark: 5.3.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+rootdir: /Users/aryahb/Downloads/pathreview-ai301-fa26-s3
+configfile: pyproject.toml
+plugins: pytest_httpserver-1.2.0, hypothesis-6.170.1, cov-7.1.0, asyncio-1.4.0, benchmark-5.3.0, platformdirs-4.13.4, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 6 items
+
+tests/integration/test_rate_limit_headers.py::test_limit_is_enforced_with_real_redis PASSED [ 16%]
+tests/integration/test_rate_limiter_redis.py::TestRateLimiterRedis::test_counts_remaining_and_denies_at_limit PASSED [ 33%]
+tests/integration/test_rate_limiter_redis.py::TestRateLimiterRedis::test_entries_outside_window_are_pruned PASSED [ 50%]
+tests/integration/test_rate_limiter_redis.py::TestRateLimiterRedis::test_key_expires_after_window_plus_one PASSED [ 66%]
+tests/integration/test_rate_limiter_redis.py::TestRateLimiterRedis::test_concurrent_requests_admit_exactly_the_limit PASSED [ 83%]
+tests/integration/test_rate_limiter_redis.py::TestRateLimiterRedis::test_fails_open_when_redis_is_unreachable PASSED [100%]
+
+=============================== warnings summary ===============================
+core/config.py:7
+  /Users/aryahb/Downloads/pathreview-ai301-fa26-s3/core/config.py:7: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    class Settings(BaseSettings):
+
+.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /Users/aryahb/Downloads/pathreview-ai301-fa26-s3/.venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+api/main.py:100
+  /Users/aryahb/Downloads/pathreview-ai301-fa26-s3/api/main.py:100: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+.venv/lib/python3.11/site-packages/fastapi/applications.py:4745
+  /Users/aryahb/Downloads/pathreview-ai301-fa26-s3/.venv/lib/python3.11/site-packages/fastapi/applications.py:4745: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)  # ty: ignore[deprecated]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 6 passed, 4 warnings in 18.52s ========================
+
+Exit status: 0

@@ -1,0 +1,551 @@
+diff --git a/api/main.py b/api/main.py
+index ca00f6e..08c82c5 100644
+--- a/api/main.py
++++ b/api/main.py
+@@ -1,12 +1,16 @@
++import redis
+ import structlog
+ from fastapi import FastAPI, Request
+ from fastapi.middleware.cors import CORSMiddleware
+ from fastapi.openapi.utils import get_openapi
+ from fastapi.responses import JSONResponse
+ 
++from api.middleware.rate_limit import RateLimitMiddleware
+ from api.middleware.request_id import RequestIDMiddleware
+ from api.routes import auth, health, profiles, reviews
++from core.config import settings
+ from core.database import init_db
++from safety.rate_limiter import RateLimiter
+ 
+ log = structlog.get_logger()
+ 
+@@ -39,6 +43,18 @@ def custom_openapi():
+ app.openapi = custom_openapi
+ 
+ 
++# Rate limiting. The Redis client connects lazily, so the app still starts when Redis is down.
++redis_client = redis.Redis.from_url(settings.redis_url)
++rate_limiter = RateLimiter(redis_client)
++
++# Added before CORS so it runs innermost: a 429 still passes through the CORS and request-ID
++# middleware, so browsers can read it and it carries X-Request-ID.
++app.add_middleware(
++    RateLimitMiddleware,
++    limiter=rate_limiter,
++    limit=settings.rate_limit_per_minute,
++)
++
+ # Add CORS middleware
+ app.add_middleware(
+     CORSMiddleware,
+diff --git a/api/middleware/rate_limit.py b/api/middleware/rate_limit.py
+new file mode 100644
+index 0000000..cc0044d
+--- /dev/null
++++ b/api/middleware/rate_limit.py
+@@ -0,0 +1,85 @@
++"""Per-client-IP rate limiting for API requests."""
++
++from collections.abc import Awaitable, Callable
++
++import structlog
++from fastapi import Request
++from fastapi.responses import JSONResponse
++from starlette.concurrency import run_in_threadpool
++from starlette.middleware.base import BaseHTTPMiddleware
++from starlette.responses import Response
++from starlette.types import ASGIApp
++
++from safety.rate_limiter import RateLimiter
++
++log = structlog.get_logger()
++
++RATE_LIMIT_WINDOW_SECONDS = 60
++
++
++class RateLimitMiddleware(BaseHTTPMiddleware):
++    """Limit requests per client IP and report the limit in response headers.
++
++    Requests to an exempt path, and OPTIONS requests (CORS preflight), pass
++    through unchanged. Allowed responses carry X-RateLimit-Limit and
++    X-RateLimit-Remaining. Denied requests get HTTP 429 with a Retry-After
++    header.
++    """
++
++    def __init__(
++        self,
++        app: ASGIApp,
++        limiter: RateLimiter,
++        limit: int,
++        window_seconds: int = RATE_LIMIT_WINDOW_SECONDS,
++        exempt_paths: tuple[str, ...] = ("/health",),
++    ) -> None:
++        """Initialize the middleware.
++
++        Args:
++            app: The ASGI application to wrap.
++            limiter: Limiter that counts requests per identifier.
++            limit: Maximum requests allowed per window.
++            window_seconds: Length of the rolling window in seconds.
++            exempt_paths: Request paths that are never limited.
++        """
++        super().__init__(app)
++        self.limiter = limiter
++        self.limit = limit
++        self.window_seconds = window_seconds
++        self.exempt_paths = exempt_paths
++
++    async def dispatch(
++        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
++    ) -> Response:
++        """Check the limit for this request, then forward it or reject it.
++
++        Args:
++            request: The incoming request.
++            call_next: Calls the rest of the middleware stack.
++
++        Returns:
++            The downstream response with rate-limit headers, or a 429 response.
++        """
++        if request.method == "OPTIONS" or request.url.path in self.exempt_paths:
++            return await call_next(request)
++
++        identifier = request.client.host if request.client else "unknown"
++        allowed, remaining = await run_in_threadpool(
++            self.limiter.check_rate_limit, identifier, self.limit, self.window_seconds
++        )
++
++        if not allowed:
++            log.warning("request_rate_limited", identifier=identifier, path=request.url.path)
++            response: Response = JSONResponse(
++                {"detail": "Rate limit exceeded"},
++                status_code=429,
++                headers={"Retry-After": str(self.window_seconds)},
++            )
++            response.headers["X-RateLimit-Remaining"] = "0"
++        else:
++            response = await call_next(request)
++            response.headers["X-RateLimit-Remaining"] = str(remaining)
++
++        response.headers["X-RateLimit-Limit"] = str(self.limit)
++        return response
+diff --git a/safety/rate_limiter.py b/safety/rate_limiter.py
+index acfc601..a0ada22 100644
+--- a/safety/rate_limiter.py
++++ b/safety/rate_limiter.py
+@@ -1,12 +1,31 @@
+ """Rate limiting with rolling window."""
+ 
+ import time
++import uuid
+ 
+ import redis
+ import structlog
+ 
+ logger = structlog.get_logger()
+ 
++# Prune expired entries, count the window, and admit the request in one atomic Redis call,
++# so concurrent requests cannot all read a count below the limit.
++# ARGV: now, window_seconds, limit, member. Returns {1, remaining} if admitted, {0, 0} if not.
++SLIDING_WINDOW_SCRIPT = """
++local key = KEYS[1]
++local now = tonumber(ARGV[1])
++local window = tonumber(ARGV[2])
++local limit = tonumber(ARGV[3])
++redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
++local count = redis.call('ZCARD', key)
++if count < limit then
++  redis.call('ZADD', key, now, ARGV[4])
++  redis.call('EXPIRE', key, window + 1)
++  return {1, limit - count - 1}
++end
++return {0, 0}
++"""
++
+ 
+ class RateLimiter:
+     """Rate limiter using Redis sorted sets for rolling window."""
+@@ -18,12 +37,16 @@ class RateLimiter:
+             redis_client: Redis client
+         """
+         self.redis = redis_client
++        self._check_script = redis_client.register_script(SLIDING_WINDOW_SCRIPT)
+ 
+     def check_rate_limit(
+         self, identifier: str, limit: int, window_seconds: int = 60
+     ) -> tuple[bool, int]:
+         """Check if request is within rate limit.
+ 
++        The check and the admission happen atomically in Redis. Each request is stored under
++        a unique member, so requests that share a timestamp are still counted separately.
++
+         Args:
+             identifier: Request identifier (user_id, ip_address, etc.)
+             limit: Maximum requests allowed in window
+@@ -34,35 +57,25 @@ class RateLimiter:
+         """
+         key = f"rate_limit:{identifier}"
+         now = time.time()
+-        window_start = now - window_seconds
++        member = f"{now}:{uuid.uuid4().hex}"
+ 
+         try:
+-            # Remove old entries outside the window
+-            self.redis.zremrangebyscore(key, 0, window_start)
+-
+-            # Count current requests in window
+-            current_count = self.redis.zcard(key)
+-
+-            if current_count < limit:
+-                # Add this request
+-                self.redis.zadd(key, {str(now): now})
+-                self.redis.expire(key, window_seconds + 1)
+-                remaining = limit - current_count - 1
+-
+-                logger.info(
+-                    "rate_limit_allowed",
+-                    identifier=identifier,
+-                    current_count=current_count + 1,
+-                    limit=limit,
+-                )
+-                return True, remaining
+-
+-            else:
+-                # Rate limit exceeded
+-                logger.warning("rate_limit_exceeded", identifier=identifier, limit=limit)
+-                return False, 0
+-
++            allowed, remaining = self._check_script(
++                keys=[key], args=[now, window_seconds, limit, member]
++            )
+         except Exception as e:
+             logger.error("rate_limiter_error", identifier=identifier, error=str(e))
+             # Fail open on Redis error
+             return True, limit
++
++        if allowed:
++            logger.info(
++                "rate_limit_allowed",
++                identifier=identifier,
++                current_count=limit - remaining,
++                limit=limit,
++            )
++            return True, int(remaining)
++
++        logger.warning("rate_limit_exceeded", identifier=identifier, limit=limit)
++        return False, 0
+diff --git a/tests/integration/test_rate_limit_headers.py b/tests/integration/test_rate_limit_headers.py
+new file mode 100644
+index 0000000..f5cc64e
+--- /dev/null
++++ b/tests/integration/test_rate_limit_headers.py
+@@ -0,0 +1,35 @@
++"""Rate limiting end to end: the real app, the real Redis, and the configured limit."""
++
++import pytest
++import redis
++from fastapi.testclient import TestClient
++
++from api.main import app
++from core.config import settings
++
++INTEGRATION_CLIENT = ("203.0.113.9", 50001)
++KEY = f"rate_limit:{INTEGRATION_CLIENT[0]}"
++
++
++@pytest.mark.integration
++def test_limit_is_enforced_with_real_redis() -> None:
++    """The first `limit` requests pass with decreasing remaining counts; the next one gets 429."""
++    limit = settings.rate_limit_per_minute
++    store = redis.Redis.from_url(settings.redis_url)
++    store.delete(KEY)
++    client = TestClient(app, client=INTEGRATION_CLIENT)
++
++    try:
++        for i in range(1, limit + 1):
++            response = client.get("/")
++            assert response.status_code == 200, f"request {i} was not allowed"
++            assert response.headers["X-RateLimit-Limit"] == str(limit)
++            assert response.headers["X-RateLimit-Remaining"] == str(limit - i)
++
++        denied = client.get("/")
++        assert denied.status_code == 429
++        assert denied.headers["Retry-After"] == "60"
++        assert denied.headers["X-RateLimit-Remaining"] == "0"
++        assert "X-Request-ID" in denied.headers
++    finally:
++        store.delete(KEY)
+diff --git a/tests/integration/test_rate_limiter_redis.py b/tests/integration/test_rate_limiter_redis.py
+new file mode 100644
+index 0000000..cad0e3f
+--- /dev/null
++++ b/tests/integration/test_rate_limiter_redis.py
+@@ -0,0 +1,85 @@
++"""RateLimiter against a real Redis: the Lua script's counts, pruning, TTL, and concurrency."""
++
++import time
++import uuid
++from concurrent.futures import ThreadPoolExecutor
++
++import pytest
++import redis
++
++from core.config import settings
++from safety.rate_limiter import RateLimiter
++
++
++@pytest.fixture
++def store() -> redis.Redis:
++    """Real Redis client from settings."""
++    return redis.Redis.from_url(settings.redis_url)
++
++
++@pytest.fixture
++def identifier(store: redis.Redis):
++    """A unique identifier per test, with its key removed afterwards."""
++    ident = f"test-{uuid.uuid4().hex}"
++    yield ident
++    store.delete(f"rate_limit:{ident}")
++
++
++@pytest.mark.integration
++class TestRateLimiterRedis:
++    """Behavior of RateLimiter.check_rate_limit against a real Redis."""
++
++    def test_counts_remaining_and_denies_at_limit(self, store, identifier):
++        """Three allowed requests report 2, 1, 0 remaining; the fourth is denied."""
++        limiter = RateLimiter(store)
++
++        results = [limiter.check_rate_limit(identifier, limit=3) for _ in range(4)]
++
++        assert results == [(True, 2), (True, 1), (True, 0), (False, 0)]
++
++    def test_entries_outside_window_are_pruned(self, store, identifier):
++        """After the window passes, previously counted requests stop counting."""
++        limiter = RateLimiter(store)
++
++        assert limiter.check_rate_limit(identifier, limit=2, window_seconds=1) == (True, 1)
++        assert limiter.check_rate_limit(identifier, limit=2, window_seconds=1) == (True, 0)
++        assert limiter.check_rate_limit(identifier, limit=2, window_seconds=1) == (False, 0)
++
++        time.sleep(1.1)
++
++        assert limiter.check_rate_limit(identifier, limit=2, window_seconds=1) == (True, 1)
++
++    def test_key_expires_after_window_plus_one(self, store, identifier):
++        """The key's TTL is set to window_seconds + 1, as the original implementation did."""
++        limiter = RateLimiter(store)
++
++        limiter.check_rate_limit(identifier, limit=10, window_seconds=60)
++
++        ttl = store.ttl(f"rate_limit:{identifier}")
++        assert 59 <= ttl <= 61
++
++    def test_concurrent_requests_admit_exactly_the_limit(self, store, identifier):
++        """Regression: 20 simultaneous requests with limit 10 admit exactly 10.
++
++        Before the atomic script, concurrent requests could all read a count below the
++        limit and all be admitted.
++        """
++        limiter = RateLimiter(store)
++        limit = 10
++
++        with ThreadPoolExecutor(max_workers=20) as pool:
++            results = list(
++                pool.map(lambda _: limiter.check_rate_limit(identifier, limit), range(20))
++            )
++
++        assert sum(1 for allowed, _ in results if allowed) == limit
++        assert sum(1 for allowed, _ in results if not allowed) == 20 - limit
++        # Every admitted request left its own member in the sorted set.
++        assert store.zcard(f"rate_limit:{identifier}") == limit
++
++    def test_fails_open_when_redis_is_unreachable(self):
++        """With no Redis listening, the limiter returns (True, limit) instead of raising."""
++        unreachable = redis.Redis(host="127.0.0.1", port=1, socket_connect_timeout=0.2)
++        limiter = RateLimiter(unreachable)
++
++        assert limiter.check_rate_limit("unreachable-test", limit=10) == (True, 10)
+diff --git a/tests/unit/test_rate_limit_middleware.py b/tests/unit/test_rate_limit_middleware.py
+new file mode 100644
+index 0000000..c5a4a69
+--- /dev/null
++++ b/tests/unit/test_rate_limit_middleware.py
+@@ -0,0 +1,113 @@
++"""Tests for RateLimitMiddleware, using a stub limiter (no Redis)."""
++
++import pytest
++from fastapi import FastAPI
++from fastapi.testclient import TestClient
++
++from api.middleware.rate_limit import RateLimitMiddleware
++
++CLIENT_IP = "203.0.113.7"
++
++
++class StubLimiter:
++    """Records calls and returns a fixed decision."""
++
++    def __init__(self, allowed: bool = True, remaining: int = 59) -> None:
++        self.allowed = allowed
++        self.remaining = remaining
++        self.calls: list[tuple[str, int, int]] = []
++
++    def check_rate_limit(
++        self, identifier: str, limit: int, window_seconds: int = 60
++    ) -> tuple[bool, int]:
++        self.calls.append((identifier, limit, window_seconds))
++        return self.allowed, self.remaining
++
++
++def make_client(limiter: StubLimiter, limit: int = 60) -> TestClient:
++    """Build a small app with the middleware and return a client for it."""
++    app = FastAPI()
++    app.add_middleware(RateLimitMiddleware, limiter=limiter, limit=limit)
++
++    @app.get("/")
++    async def root() -> dict[str, bool]:
++        return {"ok": True}
++
++    @app.get("/health")
++    async def health() -> dict[str, str]:
++        return {"status": "ok"}
++
++    return TestClient(app, client=(CLIENT_IP, 50000))
++
++
++@pytest.mark.unit
++class TestRateLimitMiddleware:
++    """Headers, 429 handling, exemptions, and identifier for RateLimitMiddleware."""
++
++    def test_allowed_request_has_rate_limit_headers(self) -> None:
++        limiter = StubLimiter(allowed=True, remaining=59)
++        client = make_client(limiter)
++
++        response = client.get("/")
++
++        assert response.status_code == 200
++        assert response.headers["X-RateLimit-Limit"] == "60"
++        assert response.headers["X-RateLimit-Remaining"] == "59"
++
++    def test_denied_request_returns_429_with_retry_after(self) -> None:
++        limiter = StubLimiter(allowed=False, remaining=0)
++        client = make_client(limiter)
++
++        response = client.get("/")
++
++        assert response.status_code == 429
++        assert response.json() == {"detail": "Rate limit exceeded"}
++        assert response.headers["Retry-After"] == "60"
++        assert response.headers["X-RateLimit-Limit"] == "60"
++        assert response.headers["X-RateLimit-Remaining"] == "0"
++
++    def test_health_is_exempt_from_limiting(self) -> None:
++        limiter = StubLimiter(allowed=False, remaining=0)
++        client = make_client(limiter)
++
++        response = client.get("/health")
++
++        assert response.status_code == 200
++        assert limiter.calls == []
++        assert "X-RateLimit-Limit" not in response.headers
++
++    def test_options_requests_are_not_limited(self) -> None:
++        limiter = StubLimiter(allowed=False, remaining=0)
++        client = make_client(limiter)
++
++        response = client.options("/")
++
++        assert limiter.calls == []
++        assert "X-RateLimit-Limit" not in response.headers
++
++    def test_identifier_is_client_host(self) -> None:
++        limiter = StubLimiter()
++        client = make_client(limiter, limit=60)
++
++        client.get("/")
++
++        assert limiter.calls == [(CLIENT_IP, 60, 60)]
++
++    @pytest.mark.parametrize("remaining", [59, 30, 0])
++    def test_remaining_value_comes_from_limiter(self, remaining: int) -> None:
++        limiter = StubLimiter(allowed=True, remaining=remaining)
++        client = make_client(limiter)
++
++        response = client.get("/")
++
++        assert response.headers["X-RateLimit-Remaining"] == str(remaining)
++
++    def test_fail_open_reports_limit_as_remaining(self) -> None:
++        """Documents the outage behavior: the limiter fails open and returns (True, limit)."""
++        limiter = StubLimiter(allowed=True, remaining=60)
++        client = make_client(limiter, limit=60)
++
++        response = client.get("/")
++
++        assert response.status_code == 200
++        assert response.headers["X-RateLimit-Remaining"] == "60"
+diff --git a/tests/unit/test_rate_limiter.py b/tests/unit/test_rate_limiter.py
+index f3611d5..ef174e8 100644
+--- a/tests/unit/test_rate_limiter.py
++++ b/tests/unit/test_rate_limiter.py
+@@ -7,14 +7,38 @@ import pytest
+ from safety.rate_limiter import RateLimiter
+ 
+ 
++def _mirror_script(redis_mock):
++    """Run the Lua logic in Python against the mock's commands.
++
++    The real check is SLIDING_WINDOW_SCRIPT, which runs inside Redis. Its behavior against
++    a real Redis is covered in tests/integration/test_rate_limiter_redis.py. This mirror
++    lets the mock-based tests below keep asserting on the same commands.
++    """
++
++    def run(keys, args):
++        key = keys[0]
++        now, window, limit, member = args
++        redis_mock.zremrangebyscore(key, 0, now - window)
++        count = redis_mock.zcard(key)
++        if count < limit:
++            redis_mock.zadd(key, {member: now})
++            redis_mock.expire(key, window + 1)
++            return [1, limit - count - 1]
++        return [0, 0]
++
++    return run
++
++
+ @pytest.mark.unit
+ class TestRateLimiter:
+     """Test suite for RateLimiter."""
+ 
+     @pytest.fixture
+     def mock_redis(self):
+-        """Create a mock Redis client."""
+-        return Mock()
++        """Create a mock Redis client whose registered script mirrors the Lua logic."""
++        redis_mock = Mock()
++        redis_mock.register_script.side_effect = lambda script: _mirror_script(redis_mock)
++        return redis_mock
+ 
+     @pytest.fixture
+     def limiter(self, mock_redis):
+@@ -293,3 +317,18 @@ class TestRateLimiter:
+         # Should work with API key
+         call_args = mock_redis.zremrangebyscore.call_args
+         assert api_key in call_args[0][0]
++
++    def test_requests_at_same_timestamp_get_unique_members(self, limiter, mock_redis):
++        """Test two requests with the same timestamp are stored as two sorted-set members."""
++        mock_redis.zremrangebyscore = Mock()
++        mock_redis.zcard = Mock(return_value=0)
++        mock_redis.zadd = Mock()
++        mock_redis.expire = Mock()
++
++        with patch("time.time", return_value=1000):
++            limiter.check_rate_limit("user123", limit=10)
++            limiter.check_rate_limit("user123", limit=10)
++
++        members = [call.args[1] for call in mock_redis.zadd.call_args_list]
++        assert len(members) == 2
++        assert set(members[0]) != set(members[1])

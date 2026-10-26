@@ -1,0 +1,265 @@
+$ curl -sS http://127.0.0.1:8010/health
+{"detail":{"status":"unhealthy","dependencies":{"postgres":"unhealthy","redis":"unhealthy","vector_db":"healthy"},"safety_events_last_hour":0,"timestamp":"2026-10-26T21:38:56.742943"}}
+Exit status: 0
+
+$ .venv/bin/python -c "import redis; from core.config import settings; print(redis.Redis.from_url(settings.redis_url).delete('rate_limit:127.0.0.1'))"
+0
+
+Exit status: 0
+
+$ curl -sS -i http://127.0.0.1:8010/
+HTTP/1.1 200 OK
+date: Mon, 26 Oct 2026 21:38:56 GMT
+server: uvicorn
+content-length: 57
+content-type: application/json
+x-ratelimit-remaining: 59
+x-ratelimit-limit: 60
+vary: Origin
+x-request-id: 097e31aa-dd61-4cab-b9cf-f6e9c60bdfa0
+
+{"message":"PathReview API is running","version":"1.0.0"}
+Exit status: 0
+
+$ .venv/bin/python -c "import redis; from core.config import settings; print(redis.Redis.from_url(settings.redis_url).delete('rate_limit:127.0.0.1'))"
+1
+
+Exit status: 0
+
+$ for i in $(seq 1 200); do curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8010/; done | sort | uniq -c
+  60 200
+ 140 429
+
+Exit status: 0
+
+$ curl -sS -i http://127.0.0.1:8010/
+HTTP/1.1 429 Too Many Requests
+date: Mon, 26 Oct 2026 21:38:58 GMT
+server: uvicorn
+retry-after: 60
+content-length: 32
+content-type: application/json
+x-ratelimit-remaining: 0
+x-ratelimit-limit: 60
+vary: Origin
+x-request-id: 1d739d5f-a54d-4eac-baac-b9fe36ff9371
+
+{"detail":"Rate limit exceeded"}
+Exit status: 0
+
+$ for i in $(seq 1 200); do curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8010/health; done | sort | uniq -c
+ 200 503
+
+Exit status: 0
+
+$ .venv/bin/python -c "import redis; from core.config import settings; print(redis.Redis.from_url(settings.redis_url).delete('rate_limit:127.0.0.1'))"
+1
+
+Exit status: 0
+
+$ for i in $(seq 1 50); do curl -s -o /dev/null -w '%{http_code}\n' -X POST http://127.0.0.1:8010/auth/login -d "username=user1@example.com&password=wrong-password-$i"; done | sort | uniq -c
+  50 401
+
+Exit status: 0
+
+$ curl -sS -i -X POST http://127.0.0.1:8010/auth/login -d 'username=user1@example.com&password=wrong-password-sample' 
+HTTP/1.1 401 Unauthorized
+date: Mon, 26 Oct 2026 21:39:12 GMT
+server: uvicorn
+www-authenticate: Bearer
+content-length: 38
+content-type: application/json
+x-ratelimit-remaining: 9
+x-ratelimit-limit: 60
+vary: Origin
+x-request-id: 6104aff0-645f-44cd-8aef-490005cce798
+
+{"detail":"Invalid email or password"}
+Exit status: 0
+
+$ .venv/bin/python -c "import redis; from core.config import settings; print(redis.Redis.from_url(settings.redis_url).delete('rate_limit:testclient'))"
+0
+
+Exit status: 0
+
+$ .venv/bin/python /private/tmp/unit4-evidence/trace_limiter.py
+middleware stack: ['RequestIDMiddleware', 'CORSMiddleware', 'RateLimitMiddleware']
+route count: 6
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=1 identifier=testclient limit=60 request_id=9f7452b2-4255-4dd6-b658-679b3bc3af24
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=2 identifier=testclient limit=60 request_id=3c1fe7e4-dbe6-4b0e-824d-a38794adad01
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=3 identifier=testclient limit=60 request_id=13444113-2d7e-4c35-9464-8158aa4f248d
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=4 identifier=testclient limit=60 request_id=b6839441-1d1a-4eba-8413-e2f627c8b585
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=5 identifier=testclient limit=60 request_id=f91d1071-f62a-4b86-af18-7ced0c95e63b
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=6 identifier=testclient limit=60 request_id=304314be-622d-4268-a97c-5db0a3da7717
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=7 identifier=testclient limit=60 request_id=2b5d06a0-981e-447a-8ef3-1327f0a12d01
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=8 identifier=testclient limit=60 request_id=49704201-490b-4d04-bb11-2b1a647c7b2b
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=9 identifier=testclient limit=60 request_id=70cb17fa-841e-4edd-8153-500d02686221
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=10 identifier=testclient limit=60 request_id=96cf499a-644c-4d4a-bc14-92e8697977a2
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=11 identifier=testclient limit=60 request_id=2738cab2-1b09-4fa1-b7a9-c2f3409e0bd3
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=12 identifier=testclient limit=60 request_id=fccf1c39-6b22-4fcf-910d-6b2ef006ef7e
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=13 identifier=testclient limit=60 request_id=1c4b31f6-c6ee-436e-82b4-5711e8e4b4cf
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=14 identifier=testclient limit=60 request_id=f3065180-a087-4ae3-a6bd-1db99afd6e82
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=15 identifier=testclient limit=60 request_id=19452517-68e6-465b-b01a-3794e2cdd2b1
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=16 identifier=testclient limit=60 request_id=7699f61c-edf9-476d-952c-30454e2e1657
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=17 identifier=testclient limit=60 request_id=1027f49b-590e-4838-a0c0-bf77ff7ebb9e
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=18 identifier=testclient limit=60 request_id=eb04c54c-7883-4822-893b-0c7b4c9237f6
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=19 identifier=testclient limit=60 request_id=93070171-2084-4f30-b244-c13521a0bbe2
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=20 identifier=testclient limit=60 request_id=a74f7ba9-41cb-4d63-9d19-52bc1039ff8c
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=0aae05fd-debc-46d9-956b-ba046a35338e
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=0aae05fd-debc-46d9-956b-ba046a35338e
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=0aae05fd-debc-46d9-956b-ba046a35338e
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=01967e3d-ef55-4584-95be-1644991077b0
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=01967e3d-ef55-4584-95be-1644991077b0
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=01967e3d-ef55-4584-95be-1644991077b0
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=3f7ac410-77a9-4252-817e-b0907f4ad732
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=3f7ac410-77a9-4252-817e-b0907f4ad732
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=3f7ac410-77a9-4252-817e-b0907f4ad732
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=aa564734-8276-40d5-985d-63bfbf4d67e1
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=aa564734-8276-40d5-985d-63bfbf4d67e1
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=aa564734-8276-40d5-985d-63bfbf4d67e1
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=c4d39f63-b33a-4f08-ae3b-e1cac18c2368
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=c4d39f63-b33a-4f08-ae3b-e1cac18c2368
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=c4d39f63-b33a-4f08-ae3b-e1cac18c2368
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=b1571b6a-3c44-40f9-b849-87adbf1cff97
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=b1571b6a-3c44-40f9-b849-87adbf1cff97
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=b1571b6a-3c44-40f9-b849-87adbf1cff97
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=d9a542e9-5f08-45ab-9321-9319b39bffbd
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=d9a542e9-5f08-45ab-9321-9319b39bffbd
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=d9a542e9-5f08-45ab-9321-9319b39bffbd
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=d3e3122e-f35d-4359-99a2-20a8438e8255
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=d3e3122e-f35d-4359-99a2-20a8438e8255
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=d3e3122e-f35d-4359-99a2-20a8438e8255
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=760de28b-0d3e-42ab-9b8d-f915f53523d5
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=760de28b-0d3e-42ab-9b8d-f915f53523d5
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=760de28b-0d3e-42ab-9b8d-f915f53523d5
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=6ecee390-8b51-4f49-8841-ae1725dc0ffe
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=6ecee390-8b51-4f49-8841-ae1725dc0ffe
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=6ecee390-8b51-4f49-8841-ae1725dc0ffe
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=1642b8fe-b4ff-4861-8e60-9d195376690b
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=1642b8fe-b4ff-4861-8e60-9d195376690b
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=1642b8fe-b4ff-4861-8e60-9d195376690b
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=b68df2cd-c4a0-4b4a-aa3d-fafd44bd5da8
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=b68df2cd-c4a0-4b4a-aa3d-fafd44bd5da8
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=b68df2cd-c4a0-4b4a-aa3d-fafd44bd5da8
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=c8b1ec7f-b10a-4714-a66d-be56be2eb5cd
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=c8b1ec7f-b10a-4714-a66d-be56be2eb5cd
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=c8b1ec7f-b10a-4714-a66d-be56be2eb5cd
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=96f7ba93-6fb8-4be6-add9-995d8ee4fd33
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=96f7ba93-6fb8-4be6-add9-995d8ee4fd33
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=96f7ba93-6fb8-4be6-add9-995d8ee4fd33
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=38d47762-6b01-4a78-8ba6-e3cd5065b0a3
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=38d47762-6b01-4a78-8ba6-e3cd5065b0a3
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=38d47762-6b01-4a78-8ba6-e3cd5065b0a3
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=b08bd220-470a-422a-93ef-551a3533cfae
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=b08bd220-470a-422a-93ef-551a3533cfae
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=b08bd220-470a-422a-93ef-551a3533cfae
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=dce029ee-a1e2-435c-ad10-32c1efff6057
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=dce029ee-a1e2-435c-ad10-32c1efff6057
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=dce029ee-a1e2-435c-ad10-32c1efff6057
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=ff764786-449b-48cc-937b-1e07a741a8ef
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=ff764786-449b-48cc-937b-1e07a741a8ef
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=ff764786-449b-48cc-937b-1e07a741a8ef
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=e8d810d7-9618-44e4-9651-dad2e4056308
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=e8d810d7-9618-44e4-9651-dad2e4056308
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=e8d810d7-9618-44e4-9651-dad2e4056308
+2026-10-26 17:39:16 [error    ] postgres_health_check_failed   error="Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')" request_id=f1ceebaf-a1d7-47af-972a-deab255e725f
+2026-10-26 17:39:16 [error    ] redis_health_check_failed      error="'Settings' object has no attribute 'redis_host'" request_id=f1ceebaf-a1d7-47af-972a-deab255e725f
+2026-10-26 17:39:16 [debug    ] vector_db_health_check_passed  request_id=f1ceebaf-a1d7-47af-972a-deab255e725f
+statuses: {'/': {200: 20}, '/health': {503: 20}}
+2026-10-26 17:39:16 [info     ] rate_limit_allowed             current_count=21 identifier=testclient limit=60 request_id=03f28179-8f04-4a55-a89f-5c05664ebd6c
+sample headers GET /: {'x-ratelimit-remaining': '39', 'x-ratelimit-limit': '60', 'x-request-id': '03f28179-8f04-4a55-a89f-5c05664ebd6c'}
+check_rate_limit calls observed: 21
+
+Exit status: 0
+
+$ rg -n 'check_rate_limit|RateLimiter' api safety tests --glob '*.py'
+api/main.py:13:from safety.rate_limiter import RateLimiter
+api/main.py:48:rate_limiter = RateLimiter(redis_client)
+tests/integration/test_rate_limiter_redis.py:1:"""RateLimiter against a real Redis: the Lua script's counts, pruning, TTL, and concurrency."""
+tests/integration/test_rate_limiter_redis.py:11:from safety.rate_limiter import RateLimiter
+tests/integration/test_rate_limiter_redis.py:29:class TestRateLimiterRedis:
+tests/integration/test_rate_limiter_redis.py:30:    """Behavior of RateLimiter.check_rate_limit against a real Redis."""
+tests/integration/test_rate_limiter_redis.py:34:        limiter = RateLimiter(store)
+tests/integration/test_rate_limiter_redis.py:36:        results = [limiter.check_rate_limit(identifier, limit=3) for _ in range(4)]
+tests/integration/test_rate_limiter_redis.py:42:        limiter = RateLimiter(store)
+tests/integration/test_rate_limiter_redis.py:44:        assert limiter.check_rate_limit(identifier, limit=2, window_seconds=1) == (True, 1)
+tests/integration/test_rate_limiter_redis.py:45:        assert limiter.check_rate_limit(identifier, limit=2, window_seconds=1) == (True, 0)
+tests/integration/test_rate_limiter_redis.py:46:        assert limiter.check_rate_limit(identifier, limit=2, window_seconds=1) == (False, 0)
+tests/integration/test_rate_limiter_redis.py:50:        assert limiter.check_rate_limit(identifier, limit=2, window_seconds=1) == (True, 1)
+tests/integration/test_rate_limiter_redis.py:54:        limiter = RateLimiter(store)
+tests/integration/test_rate_limiter_redis.py:56:        limiter.check_rate_limit(identifier, limit=10, window_seconds=60)
+tests/integration/test_rate_limiter_redis.py:67:        limiter = RateLimiter(store)
+tests/integration/test_rate_limiter_redis.py:72:                pool.map(lambda _: limiter.check_rate_limit(identifier, limit), range(20))
+tests/integration/test_rate_limiter_redis.py:83:        limiter = RateLimiter(unreachable)
+tests/integration/test_rate_limiter_redis.py:85:        assert limiter.check_rate_limit("unreachable-test", limit=10) == (True, 10)
+safety/rate_limiter.py:30:class RateLimiter:
+safety/rate_limiter.py:42:    def check_rate_limit(
+api/middleware/rate_limit.py:13:from safety.rate_limiter import RateLimiter
+api/middleware/rate_limit.py:32:        limiter: RateLimiter,
+api/middleware/rate_limit.py:69:            self.limiter.check_rate_limit, identifier, self.limit, self.window_seconds
+tests/unit/test_rate_limit_middleware.py:20:    def check_rate_limit(
+tests/unit/test_rate_limiter.py:7:from safety.rate_limiter import RateLimiter
+tests/unit/test_rate_limiter.py:33:class TestRateLimiter:
+tests/unit/test_rate_limiter.py:34:    """Test suite for RateLimiter."""
+tests/unit/test_rate_limiter.py:45:        """Create a RateLimiter instance with mocked Redis."""
+tests/unit/test_rate_limiter.py:46:        return RateLimiter(mock_redis)
+tests/unit/test_rate_limiter.py:55:        allowed, remaining = limiter.check_rate_limit("user123", limit=10)
+tests/unit/test_rate_limiter.py:71:            allowed, remaining = limiter.check_rate_limit("user123", limit=limit)
+tests/unit/test_rate_limiter.py:82:        allowed, remaining = limiter.check_rate_limit("user123", limit=limit)
+tests/unit/test_rate_limiter.py:97:        allowed, remaining = limiter.check_rate_limit("user123", limit=limit)
+tests/unit/test_rate_limiter.py:109:            limiter.check_rate_limit("user123", limit=10, window_seconds=60)
+tests/unit/test_rate_limiter.py:127:        limiter.check_rate_limit("user1", limit=10)
+tests/unit/test_rate_limiter.py:128:        limiter.check_rate_limit("user2", limit=10)
+tests/unit/test_rate_limiter.py:141:        limiter.check_rate_limit("test_user", limit=10)
+tests/unit/test_rate_limiter.py:155:            limiter.check_rate_limit("user123", limit=10)
+tests/unit/test_rate_limiter.py:174:        limiter.check_rate_limit("user123", limit=10, window_seconds=window)
+tests/unit/test_rate_limiter.py:190:            limiter.check_rate_limit("user123", limit=10, window_seconds=custom_window)
+tests/unit/test_rate_limiter.py:203:            allowed, remaining = limiter.check_rate_limit("user123", limit=10)
+tests/unit/test_rate_limiter.py:213:        allowed, remaining = limiter.check_rate_limit("user123", limit=0)
+tests/unit/test_rate_limiter.py:223:        allowed, remaining = limiter.check_rate_limit("user123", limit=-1)
+tests/unit/test_rate_limiter.py:236:        allowed, remaining = limiter.check_rate_limit("user123", limit=large_limit)
+tests/unit/test_rate_limiter.py:248:        result = limiter.check_rate_limit("user123", limit=10)
+tests/unit/test_rate_limiter.py:264:        allowed1, remaining1 = limiter.check_rate_limit("user123", limit=10)
+tests/unit/test_rate_limiter.py:270:        allowed2, remaining2 = limiter.check_rate_limit("user123", limit=10)
+tests/unit/test_rate_limiter.py:283:            limiter.check_rate_limit("user123", limit=10, window_seconds=60)
+tests/unit/test_rate_limiter.py:288:            limiter.check_rate_limit("user123", limit=10, window_seconds=60)
+tests/unit/test_rate_limiter.py:301:        limiter.check_rate_limit("192.168.1.1", limit=100)
+tests/unit/test_rate_limiter.py:315:        limiter.check_rate_limit(api_key, limit=1000)
+tests/unit/test_rate_limiter.py:329:            limiter.check_rate_limit("user123", limit=10)
+tests/unit/test_rate_limiter.py:330:            limiter.check_rate_limit("user123", limit=10)
+
+Exit status: 0
+
+$ rg -n -i 'X-RateLimit|429|too_many' api safety tests --glob '*.py'
+tests/integration/test_rate_limit_headers.py:16:    """The first `limit` requests pass with decreasing remaining counts; the next one gets 429."""
+tests/integration/test_rate_limit_headers.py:26:            assert response.headers["X-RateLimit-Limit"] == str(limit)
+tests/integration/test_rate_limit_headers.py:27:            assert response.headers["X-RateLimit-Remaining"] == str(limit - i)
+tests/integration/test_rate_limit_headers.py:30:        assert denied.status_code == 429
+tests/integration/test_rate_limit_headers.py:32:        assert denied.headers["X-RateLimit-Remaining"] == "0"
+api/middleware/rate_limit.py:24:    through unchanged. Allowed responses carry X-RateLimit-Limit and
+api/middleware/rate_limit.py:25:    X-RateLimit-Remaining. Denied requests get HTTP 429 with a Retry-After
+api/middleware/rate_limit.py:62:            The downstream response with rate-limit headers, or a 429 response.
+api/middleware/rate_limit.py:76:                status_code=429,
+api/middleware/rate_limit.py:79:            response.headers["X-RateLimit-Remaining"] = "0"
+api/middleware/rate_limit.py:82:            response.headers["X-RateLimit-Remaining"] = str(remaining)
+api/middleware/rate_limit.py:84:        response.headers["X-RateLimit-Limit"] = str(self.limit)
+api/main.py:50:# Added before CORS so it runs innermost: a 429 still passes through the CORS and request-ID
+tests/unit/test_rate_limit_middleware.py:45:    """Headers, 429 handling, exemptions, and identifier for RateLimitMiddleware."""
+tests/unit/test_rate_limit_middleware.py:54:        assert response.headers["X-RateLimit-Limit"] == "60"
+tests/unit/test_rate_limit_middleware.py:55:        assert response.headers["X-RateLimit-Remaining"] == "59"
+tests/unit/test_rate_limit_middleware.py:57:    def test_denied_request_returns_429_with_retry_after(self) -> None:
+tests/unit/test_rate_limit_middleware.py:63:        assert response.status_code == 429
+tests/unit/test_rate_limit_middleware.py:66:        assert response.headers["X-RateLimit-Limit"] == "60"
+tests/unit/test_rate_limit_middleware.py:67:        assert response.headers["X-RateLimit-Remaining"] == "0"
+tests/unit/test_rate_limit_middleware.py:77:        assert "X-RateLimit-Limit" not in response.headers
+tests/unit/test_rate_limit_middleware.py:86:        assert "X-RateLimit-Limit" not in response.headers
+tests/unit/test_rate_limit_middleware.py:103:        assert response.headers["X-RateLimit-Remaining"] == str(remaining)
+tests/unit/test_rate_limit_middleware.py:113:        assert response.headers["X-RateLimit-Remaining"] == "60"
+
+Exit status: 0
+
+$ rg -n 'check_rate_limit' api safety --glob '*.py'
+safety/rate_limiter.py:42:    def check_rate_limit(
+api/middleware/rate_limit.py:69:            self.limiter.check_rate_limit, identifier, self.limit, self.window_seconds
+
+Exit status: 0

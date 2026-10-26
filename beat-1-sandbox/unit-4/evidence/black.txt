@@ -1,0 +1,5 @@
+$ .venv/bin/black --check .
+All done! ✨ 🍰 ✨
+114 files would be left unchanged.
+
+Exit status: 0

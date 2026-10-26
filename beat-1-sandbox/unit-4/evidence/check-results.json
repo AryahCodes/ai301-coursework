@@ -1,0 +1,47 @@
+{
+  "test-unit": {
+    "command": [
+      "make",
+      "test-unit"
+    ],
+    "exit": 0
+  },
+  "test-integration": {
+    "command": [
+      "make",
+      "test-integration"
+    ],
+    "exit": 0
+  },
+  "lint": {
+    "command": [
+      "make",
+      "lint"
+    ],
+    "exit": 0
+  },
+  "typecheck": {
+    "command": [
+      "make",
+      "typecheck"
+    ],
+    "exit": 0
+  },
+  "black": {
+    "command": [
+      ".venv/bin/black",
+      "--check",
+      "."
+    ],
+    "exit": 0
+  },
+  "frontend": {
+    "command": [
+      "npm",
+      "test",
+      "--",
+      "--run"
+    ],
+    "exit": 1
+  }
+}

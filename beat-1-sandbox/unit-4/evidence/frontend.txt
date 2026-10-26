@@ -1,0 +1,28 @@
+$ npm test -- --run
+
+> pathreview-frontend@0.1.0 test
+> vitest --run
+
+
+ RUN  v1.6.1 /Users/aryahb/Downloads/pathreview-ai301-fa26-s3/frontend
+
+ ✓ src/components/__tests__/ReviewSection.test.tsx  (10 tests) 2584ms
+ ❯ src/components/__tests__/ProfileForm.test.tsx  (8 tests | 1 failed) 8061ms
+   ❯ src/components/__tests__/ProfileForm.test.tsx > ProfileForm > validates portfolio URL character limit
+     → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/__tests__/ProfileForm.test.tsx > ProfileForm > validates portfolio URL character limit
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 17 passed (18)
+   Start at  17:37:35
+   Duration  15.40s (transform 617ms, setup 4.00s, collect 1.12s, tests 10.64s, environment 5.15s, prepare 1.37s)
+
+
+Exit status: 1

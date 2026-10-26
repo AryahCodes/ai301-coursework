@@ -190,3 +190,19 @@ Recorded after the build. Each item says what the plan said and what was done.
 6. **Repeated probe result.** Five runs of 20 simultaneous requests at a limit of 10, each with a fresh key: every run gave 10 `200` and 10 `429`, with 10 Redis entries.
 7. **Test counts.** Unit suite: 375 passed and 53 xfailed before the change, and 385 passed and 53 xfailed after. Integration suite: 6 passed.
 
+
+## Unit 4 verification and deviations (2026-10-26)
+
+- Reused implementation commit `aa04f84` on `fix/34-rate-limit-headers`; no additional implementation changes were needed. The three-dot comparison with fetched `upstream/main` still contains the seven files described above (including the documented concurrency expansion).
+- The middleware uses a **rolling** 60-second window, as the existing limiter and Lua implementation do. The design-options paragraph above called it a fixed window; that wording was inaccurate. `Retry-After: 60` remains a conservative bound.
+- Reran the Unit 2 reproduction against port **8010**, because an unrelated local API already occupied port 8000. Only the port changed in the HTTP commands. Existing dependencies and seeded data were reused instead of rerunning setup. Cleared only `rate_limit:127.0.0.1` between HTTP phases and `rate_limit:testclient` before the trace. Static searches used `rg` over `api`, `safety`, and `tests` to exclude dependencies and local drafts.
+- The single request showed limit 60 and remaining 59. The fresh 200-request burst returned 60 HTTP 200 and 140 HTTP 429. The exempt health control stayed at 200 HTTP 503. Fifty wrong-password logins stayed at 50 HTTP 401, and a subsequent login sample carried the rate-limit headers. The trace recorded 21 limiter calls. Full actual output is in `test_evidence.md` and the Unit 4 evidence directory.
+- All four prescribed checks passed: 385 unit tests passed with 53 unrelated expected failures, 6 real-Redis integration tests passed, Ruff passed, and mypy passed. Black passed. The first frontend run under concurrent load had one 5-second timeout (17 passed); an isolated rerun passed all 18 tests with unchanged code.
+- No issue #34 xfail marker or matching suppression exists in the tests or `pyproject.toml`; unrelated seeded-bug markers and suppressions were preserved.
+- Unit 4 skill evaluation and live CLI precheck are blocked by Claude Code's individual spend limit. No successful evaluation or live verdict is claimed. The upstream PR can still be opened with truthful test evidence; the course evaluation requirement remains outstanding until credits are restored.
+
+### Unit 4 CI correction after opening PR #268
+
+The first upstream CI run (`40406823549`) passed lint, typecheck, unit tests and frontend, but integration collection failed importing the real app: `ModuleNotFoundError: No module named 'psycopg'`. The workflow supplied a plain `postgresql://` URL, while the app uses `create_async_engine` and declares `asyncpg`. The previous empty integration suite did not import this path. Reproduced the same collection failure locally with the workflow URL. Changed only the integration job's DATABASE_URL scheme to `postgresql+asyncpg://`, matching the existing app default and installed driver. This is a necessary deviation from the original CI non-goal so the new integration tests can actually run. The empty-suite shim and all other CI behavior stay unchanged. Runtime implementation remains `aa04f84`.
+
+Final verification: corrected CI run `40407240487` passed all five jobs on `cc74654eeb2575ee35d19fdf2f2cbe584525bf0d`. The separate Codex manual live rubric review accepts the PR package. Official course evaluation is still blocked by exhausted Claude credits.

@@ -1,0 +1,5 @@
+$ make lint
+.venv/bin/ruff check .
+All checks passed!
+
+Exit status: 0

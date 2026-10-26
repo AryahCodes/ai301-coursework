@@ -1,0 +1,39 @@
+
+==================================== ERRORS ====================================
+________ ERROR collecting tests/integration/test_rate_limit_headers.py _________
+ImportError while importing test module '/Users/aryahb/Downloads/pathreview-ai301-fa26-s3/tests/integration/test_rate_limit_headers.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/homebrew/Cellar/python@3.11/3.11.15_3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/integration/test_rate_limit_headers.py:7: in <module>
+    from api.main import app
+api/main.py:10: in <module>
+    from api.routes import auth, health, profiles, reviews
+api/routes/auth.py:10: in <module>
+    from core.database import get_db
+core/database.py:11: in <module>
+    engine = create_async_engine(
+.venv/lib/python3.11/site-packages/sqlalchemy/ext/asyncio/engine.py:126: in create_async_engine
+    sync_engine = _create_engine(url, **kw)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.11/site-packages/sqlalchemy/util/deprecations.py:281: in warned
+    return fn(*args, **kwargs)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.11/site-packages/sqlalchemy/engine/create.py:602: in create_engine
+    dbapi = dbapi_meth(**dbapi_args)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/psycopg.py:771: in import_dbapi
+    import psycopg
+E   ModuleNotFoundError: No module named 'psycopg'
+=============================== warnings summary ===============================
+core/config.py:7
+  /Users/aryahb/Downloads/pathreview-ai301-fa26-s3/core/config.py:7: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+    class Settings(BaseSettings):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR tests/integration/test_rate_limit_headers.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+no tests collected, 1 error in 0.71s

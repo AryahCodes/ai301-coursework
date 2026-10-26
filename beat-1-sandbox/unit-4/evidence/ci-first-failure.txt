@@ -1,0 +1,72 @@
+test-integration	Run integration tests	﻿2026-10-26T21:45:14.7329681Z ##[group]Run set +e
+test-integration	Run integration tests	2026-10-26T21:45:14.7330016Z [36;1mset +e[0m
+test-integration	Run integration tests	2026-10-26T21:45:14.7330274Z [36;1mpytest tests/integration -v --tb=short[0m
+test-integration	Run integration tests	2026-10-26T21:45:14.7330581Z [36;1mcode=$?[0m
+test-integration	Run integration tests	2026-10-26T21:45:14.7330785Z [36;1mset -e[0m
+test-integration	Run integration tests	2026-10-26T21:45:14.7331005Z [36;1mif [ "$code" -eq 5 ]; then[0m
+test-integration	Run integration tests	2026-10-26T21:45:14.7331415Z [36;1m  echo "::notice::No integration tests collected yet - treating as success."[0m
+test-integration	Run integration tests	2026-10-26T21:45:14.7331824Z [36;1m  exit 0[0m
+test-integration	Run integration tests	2026-10-26T21:45:14.7332018Z [36;1mfi[0m
+test-integration	Run integration tests	2026-10-26T21:45:14.7332208Z [36;1mexit "$code"[0m
+test-integration	Run integration tests	2026-10-26T21:45:14.7396133Z shell: /usr/bin/bash -e {0}
+test-integration	Run integration tests	2026-10-26T21:45:14.7396399Z env:
+test-integration	Run integration tests	2026-10-26T21:45:14.7396674Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.17/x64
+test-integration	Run integration tests	2026-10-26T21:45:14.7397145Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.17/x64/lib/pkgconfig
+test-integration	Run integration tests	2026-10-26T21:45:14.7397774Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.17/x64
+test-integration	Run integration tests	2026-10-26T21:45:14.7398286Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.17/x64
+test-integration	Run integration tests	2026-10-26T21:45:14.7398933Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.17/x64
+test-integration	Run integration tests	2026-10-26T21:45:14.7399699Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.17/x64/lib
+test-integration	Run integration tests	2026-10-26T21:45:14.7400495Z   DATABASE_URL: ***localhost:5432/pathreview_test
+test-integration	Run integration tests	2026-10-26T21:45:14.7401006Z   REDIS_URL: redis://localhost:6379/0
+test-integration	Run integration tests	2026-10-26T21:45:14.7401385Z   LLM_PROVIDER: mock
+test-integration	Run integration tests	2026-10-26T21:45:14.7401717Z ##[endgroup]
+test-integration	Run integration tests	2026-10-26T21:45:16.3829759Z ============================= test session starts ==============================
+test-integration	Run integration tests	2026-10-26T21:45:16.3831053Z platform linux -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /opt/hostedtoolcache/Python/3.11.17/x64/bin/python
+test-integration	Run integration tests	2026-10-26T21:45:16.3831754Z cachedir: .pytest_cache
+test-integration	Run integration tests	2026-10-26T21:45:16.3832654Z benchmark: 5.3.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+test-integration	Run integration tests	2026-10-26T21:45:16.3834029Z hypothesis profile 'ci' -> database=None, deadline=None, print_blob=True, derandomize=True, suppress_health_check=(HealthCheck.too_slow,)
+test-integration	Run integration tests	2026-10-26T21:45:16.3835024Z rootdir: /home/runner/work/pathreview-ai301-fa26-s3/pathreview-ai301-fa26-s3
+test-integration	Run integration tests	2026-10-26T21:45:16.3835556Z configfile: pyproject.toml
+test-integration	Run integration tests	2026-10-26T21:45:16.3836249Z plugins: benchmark-5.3.0, pytest_httpserver-1.2.0, platformdirs-4.13.5, cov-7.1.0, hypothesis-6.170.12, asyncio-1.4.1, anyio-4.15.1
+test-integration	Run integration tests	2026-10-26T21:45:16.3837339Z asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+test-integration	Run integration tests	2026-10-26T21:45:17.4220093Z collecting ... collected 5 items / 1 error
+test-integration	Run integration tests	2026-10-26T21:45:17.4220825Z 
+test-integration	Run integration tests	2026-10-26T21:45:17.4221061Z ==================================== ERRORS ====================================
+test-integration	Run integration tests	2026-10-26T21:45:17.4221830Z ________ ERROR collecting tests/integration/test_rate_limit_headers.py _________
+test-integration	Run integration tests	2026-10-26T21:45:17.4223183Z ImportError while importing test module '/home/runner/work/pathreview-ai301-fa26-s3/pathreview-ai301-fa26-s3/tests/integration/test_rate_limit_headers.py'.
+test-integration	Run integration tests	2026-10-26T21:45:17.4224964Z Hint: make sure your test modules/packages have valid Python names.
+test-integration	Run integration tests	2026-10-26T21:45:17.4225525Z Traceback:
+test-integration	Run integration tests	2026-10-26T21:45:17.4226148Z /opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/importlib/__init__.py:126: in import_module
+test-integration	Run integration tests	2026-10-26T21:45:17.4227029Z     return _bootstrap._gcd_import(name[level:], package, level)
+test-integration	Run integration tests	2026-10-26T21:45:17.4227599Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+test-integration	Run integration tests	2026-10-26T21:45:17.4228173Z tests/integration/test_rate_limit_headers.py:7: in <module>
+test-integration	Run integration tests	2026-10-26T21:45:17.4228733Z     from api.main import app
+test-integration	Run integration tests	2026-10-26T21:45:17.4229115Z api/main.py:10: in <module>
+test-integration	Run integration tests	2026-10-26T21:45:17.4229732Z     from api.routes import auth, health, profiles, reviews
+test-integration	Run integration tests	2026-10-26T21:45:17.4230254Z api/routes/auth.py:10: in <module>
+test-integration	Run integration tests	2026-10-26T21:45:17.4230662Z     from core.database import get_db
+test-integration	Run integration tests	2026-10-26T21:45:17.4231000Z core/database.py:11: in <module>
+test-integration	Run integration tests	2026-10-26T21:45:17.4231308Z     engine = create_async_engine(
+test-integration	Run integration tests	2026-10-26T21:45:17.4232211Z /opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/sqlalchemy/ext/asyncio/engine.py:126: in create_async_engine
+test-integration	Run integration tests	2026-10-26T21:45:17.4232938Z     sync_engine = _create_engine(url, **kw)
+test-integration	Run integration tests	2026-10-26T21:45:17.4233266Z                   ^^^^^^^^^^^^^^^^^^^^^^^^^
+test-integration	Run integration tests	2026-10-26T21:45:17.4233877Z /opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/sqlalchemy/util/deprecations.py:281: in warned
+test-integration	Run integration tests	2026-10-26T21:45:17.4234583Z     return fn(*args, **kwargs)  # type: ignore[no-any-return]
+test-integration	Run integration tests	2026-10-26T21:45:17.4234981Z            ^^^^^^^^^^^^^^^^^^^
+test-integration	Run integration tests	2026-10-26T21:45:17.4235570Z /opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/sqlalchemy/engine/create.py:602: in create_engine
+test-integration	Run integration tests	2026-10-26T21:45:17.4236222Z     dbapi = dbapi_meth(**dbapi_args)
+test-integration	Run integration tests	2026-10-26T21:45:17.4236521Z             ^^^^^^^^^^^^^^^^^^^^^^^^
+test-integration	Run integration tests	2026-10-26T21:45:17.4237192Z /opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/psycopg.py:771: in import_dbapi
+test-integration	Run integration tests	2026-10-26T21:45:17.4237909Z     import psycopg
+test-integration	Run integration tests	2026-10-26T21:45:17.4238201Z E   ModuleNotFoundError: No module named 'psycopg'
+test-integration	Run integration tests	2026-10-26T21:45:17.4238625Z =============================== warnings summary ===============================
+test-integration	Run integration tests	2026-10-26T21:45:17.4239007Z core/config.py:7
+test-integration	Run integration tests	2026-10-26T21:45:17.4240569Z   /home/runner/work/pathreview-ai301-fa26-s3/pathreview-ai301-fa26-s3/core/config.py:7: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.14/migration/
+test-integration	Run integration tests	2026-10-26T21:45:17.4242055Z     class Settings(BaseSettings):
+test-integration	Run integration tests	2026-10-26T21:45:17.4242227Z 
+test-integration	Run integration tests	2026-10-26T21:45:17.4242436Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+test-integration	Run integration tests	2026-10-26T21:45:17.4242891Z =========================== short test summary info ============================
+test-integration	Run integration tests	2026-10-26T21:45:17.4243272Z ERROR tests/integration/test_rate_limit_headers.py
+test-integration	Run integration tests	2026-10-26T21:45:17.4243654Z !!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+test-integration	Run integration tests	2026-10-26T21:45:17.4244052Z ========================= 1 warning, 1 error in 1.58s ==========================
+test-integration	Run integration tests	2026-10-26T21:45:17.6032224Z ##[error]Process completed with exit code 2.

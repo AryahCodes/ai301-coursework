@@ -1,0 +1,10 @@
+{
+  "starter_repository": "https://github.com/codepath/ai301-unit4-starter",
+  "starter_commit": "76e4b7382740da2a496e538ae2a0ece3f07272fd",
+  "harness_sha256": "2cada243f960ff150edb4c78af8161ff969a3b7e0b3800d332a309f0bdbea40a",
+  "command": "python3 run_eval.py --skill ~/.claude/skills/pr-precheck --save-run eval-run.txt --out full-run-1.json",
+  "official_attempts": 1,
+  "successful_scored_packages": 0,
+  "official_transcript_generated": false,
+  "claude_attempts_after_resume": 0
+}
