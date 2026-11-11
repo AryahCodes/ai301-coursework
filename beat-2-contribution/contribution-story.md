@@ -1,4 +1,4 @@
-# Contribution: [Issue Title]
+# Contribution: Test recovery when malformed JSON is followed by valid output
 
 Path: `beat-2-contribution/contribution-story.md`
 
@@ -10,8 +10,8 @@ files and no evidence uploads are part of Assignment 5.
 **Contribution Number:** [1]
 **Student:** Aryahvishwa Babu
 **GitHub Username:** AryahCodes
-**Issue:** [GitHub issue link]
-**Pull Request:** [GitHub PR link, once opened]
+**Issue:** https://github.com/ashrafee-dev/scamshield-api/issues/200
+**Pull Request:** https://github.com/ashrafee-dev/scamshield-api/pull/377
 
 One repository, built across units 5 to 8, telling the whole story of your real
 contribution. Fill it as you work, not at the end — the sections below ask for evidence that
@@ -66,44 +66,58 @@ OAuth was expired, so I ran the same funnel with `gh` and saved real output in
 issues; I picked `pysad#703` and `scamshield-api#200` as provisional wild candidates after
 direct grading.
 
-**Unit 6: [one line on the tool work]**
+**Unit 6: Voice guard, wild scopes, repo memory, rubric scope patch**
 
-[2-4 sentences: the voice-guard, the repo-memory file. What broke or
-fell short, and what changed because of it. "Nothing broke" counts when
-it is true - say how you know.]
+I installed the voice guard under `~/.claude/voice-guard/`, merged the hook into
+`~/.claude/settings.json`, symlinked one canonical `voice-guide.md`, swapped repro-check and
+plan-check to wild scopes, and added the upstream claims/questions/pings rules. I wrote
+`CLAUDE.local.md` for ScamShield and excluded it via `.git/info/exclude`. Manual
+`check_voice.py --draft` could not run because Claude OAuth is expired (same blocker as Unit 5).
+I patched issue-scout with `scope-feasible` and documented it in `scan-notes.md`. Unit 1 eval
+smoke (`run_eval.py --limit 1`) errored for the same auth reason.
 
-**Unit 7: [one line on the tool work]**
+**Unit 7: Ship-gate and ship-manifest on ScamShield**
 
-[2-4 sentences: the ship-gate and your gate manifest. What it produced
-on your real branch, what fought you, what changed because of it.]
+I ran `install.py` for the ship-gate, filled `ship-manifest.md` with CONTRIBUTING.md
+commands (`uv sync`, focused pytest, full pytest, pylint, `scripts/check.sh`), and committed
+`tests/roadmap/provider/test_retry_success.py`. All five manifest checks passed; pr-precheck
+inside the gate stopped on expired Claude OAuth, so I opened PR #377 with `gh pr create` after
+verifying checks myself.
 
-**Unit 8: [one line on the tool work]**
+**Unit 8: PR monitor playbook and state read**
 
-[2-4 sentences: the PR-monitor and your playbook. What it read, what it
-drafted, what you did with the draft.]
+I installed `~/.claude/pr-monitor/`, filled `playbook.md` with 14/28/45-day nudge windows
+grounded in recent merged PR dates on this repo, and ran `monitor.py --state` on PR #377
+(QUIET, mergeable, no review yet). A full monitor run stopped on Claude auth; I did not post
+any drafted nudge upstream.
 
 ---
 
 ## Why I Chose This Issue
 
-[1-2 paragraphs in your own words: how you searched, what your scan
-surfaced, what your scout's verdict said, why this issue fits your
-profile, and what you hope to learn. If your scout's verdict on it
-was reject and you chose it anyway, say so here and say why; choosing
-against your own tool silently is what loses points. Close with an
-honest read of the tool itself: where the scout fell short on a real
-wild search and what you changed or would change, or what convinced
-you it held up. **Record the link to your claim comment in this section too.**
-Not claimed yet? Write `claim pending` and today's date where the link goes,
-and add the link the moment your claim lands.]
+My Unit 5 scout direct-grade accepted scamshield-api #200: beginner roadmap labels, no
+assignees, zero comments, and a test-only scope that matches my Python backend and pytest
+preferences. The issue names the exact file to add and the acceptance criteria (malformed JSON
+then valid assessment, exactly two mocked calls). I did not find the CodePath Issue Selection
+site URL in my coursework repo, so eligibility is provisional until I confirm with an
+instructor or the portal.
+
+I chose it over pysad #703 because ScamShield's brief is entirely local tests with mocked
+providers, which fits my laptop setup without ML library churn. The scout's first ranking pass
+surfaced spam repos; the `stars:>200` query patch is what made wild search usable. That weakness
+is why I keep the rubric scope-feasible patch from Unit 6 instead of treating every open edge
+as a hard reject.
+
+**Claim comment:** claim pending, 2026-11-11. Draft checked locally at
+`/Users/aryahb/Downloads/scamshield-api/.claim-draft.md` (not posted; awaiting my review per
+CONTRIBUTING.md human-verification policy).
 
 **Toolkit**
 
-- Tool: issue-scout (your scout: your search strategy, your rubric),
-  and how you used it
-- What it produced: [the scan and its verdict on this issue, described]
-- Difficulties: [where it fell short, or "none met" if none did]
-- What changed: [what you patched or would update, or "nothing"]
+- Tool: issue-scout (direct grade on issue URL from `scan-output.md`)
+- What it produced: accept verdict on #200; difficulty note straightforward (file path named)
+- Difficulties: Claude could not run the skill CLI; grading used live `gh` evidence
+- What changed: `scope-feasible` rubric patch after Unit 6 instructions
 
 ---
 
@@ -111,26 +125,32 @@ and add the link the moment your claim lands.]
 
 **Problem Description**
 
-[In your own words, what is broken or missing?]
+The test suite checks invalid schema recovery and double JSON failure, but not the success
+path when the first provider payload is malformed JSON and the second is valid.
 
 **Expected Behavior**
 
-[What should happen?]
+`get_assessment` should retry once, call the provider twice, and return a validated
+`riskAssessment` when the second payload is complete JSON.
 
 **Current Behavior**
 
-[What actually happens?]
+Runtime code in `app/services/risk.py` already implements that retry loop. The gap is
+coverage only: no roadmap test file asserts recovery after `JSONDecodeError`.
 
 **Affected Components**
 
-[Which parts of the codebase are involved?]
+- `app/services/risk.py` — `get_assessment` (read for orientation; unchanged in my PR)
+- `app/services/ai.py` — where live JSON parsing would occur (mocked in tests)
+- `tests/test_ai.py`, `tests/test_risk.py` — related cases
+- New: `tests/roadmap/provider/test_retry_success.py`
 
 **Toolkit**
 
-- Tool:
-- What it produced:
-- Difficulties:
-- What changed:
+- Tool: `CLAUDE.local.md` repo memory plus manual read of issue body and `AGENTS.md`
+- What it produced: subsystem notes and file list for provider retry tests
+- Difficulties: none on understanding; issue checklist is explicit
+- What changed: nothing in runtime
 
 ---
 
@@ -138,31 +158,31 @@ and add the link the moment your claim lands.]
 
 **Environment Setup**
 
-[What a stranger would need to stand this up: your operating system,
-the relevant versions (language, runtime, package manager, the project
-itself), and how you set the project up. Then the challenges you faced
-and how you solved them, or that none came up.]
+macOS, Python 3.13 via uv 0.13.7 (installed with Astral's installer), fork clone at
+`/Users/aryahb/Downloads/scamshield-api`, branch `test/200-provider-json-retry` from upstream
+`main`. Setup: `uv sync --dev --frozen`. No Redis, FFmpeg, or live DeepSeek key needed for this
+test (conftest mocks credentials and Redis).
 
 **Steps to Reproduce**
 
-1. [Step 1]
-2. [Step 2]
-3. [Observed result]
+1. Read `get_assessment` in `app/services/risk.py` and existing tests in `tests/test_ai.py`.
+2. Note `test_malformed_json_has_bounded_retries` covers two failures, not success on retry.
+3. Run `uv run pytest tests/roadmap/provider/test_retry_success.py -q` before the new file
+   existed: collection would fail (file missing). After the commit, two tests pass.
 
 **Reproduction Evidence**
 
-- **Commit showing reproduction:** [link to commit in your fork]
-- **Screenshots/logs:** [if applicable]
-- **My findings:** [what you discovered during reproduction; an
-  honest, evidenced cannot-reproduce that led you to re-pick or ask
-  the maintainer belongs here and costs you nothing]
+- **Commit showing reproduction:** https://github.com/AryahCodes/scamshield-api/commit/4ce31f6
+- **Screenshots/logs:** n/a (pytest text in `test_evidence.md` in clone)
+- **My findings:** Behavior already matched the issue description; this was a missing regression
+  test, not a failing production bug.
 
 **Toolkit**
 
-- Tool:
-- What it produced:
-- Difficulties:
-- What changed:
+- Tool: repro-check mindset (wild scope: no duplicate repro comment needed on a test-only gap)
+- What it produced: recorded gap between existing tests and issue acceptance criteria
+- Difficulties: none
+- What changed: nothing upstream before implementation
 
 ---
 
@@ -170,93 +190,95 @@ and how you solved them, or that none came up.]
 
 **Analysis**
 
-[Your analysis of the root cause: what is causing the issue, traced
-to the files and functions involved.]
+`get_assessment` loops twice on `ValidationError` and `json.JSONDecodeError`. Mocking
+`ask_deepseek` at the risk layer matches `tests/test_risk.py` and avoids live API calls.
 
 **Proposed Solution**
 
-[High-level description of your fix approach, and what you are
-deliberately NOT changing.]
+Add `test_retry_success.py` with `side_effect=[JSONDecodeError, valid dict]`, assert
+`call_count == 2` and field values on the returned model. Add a second test ensuring
+`get_ai_client` is not called when `ask_deepseek` is patched.
 
 **Implementation Plan**
 
-1. [Modify file X to do Y]
-2. [Add or change Z]
-3. [Update tests]
+1. Create `tests/roadmap/provider/test_retry_success.py`.
+2. Run issue verification commands and full `scripts/check.sh`.
+3. Open PR with `Fixes #200` only if criteria fully met (test-only PR).
 
-[Record deviations here as they happen: what changed mid-build and
-why. A recorded deviation is honest work; silent drift is not.]
+No deviations: no runtime edits were required.
 
 **Toolkit**
 
-- Tool:
-- What it produced:
-- Difficulties:
-- What changed:
+- Tool: plan-check (wild scope; plan in local `plan.md`, not posted to issue thread)
+- What it produced: one-page plan aligned with issue checklist
+- Difficulties: plan-check live grading blocked on Claude OAuth (same as other skills)
+- What changed: nothing
 
 ---
 
 ## Testing Strategy
 
-[What observable checks prove the fix: your reproduction steps re-run
-against the built change (before and after), and the repo's own test
-suite or checks with the outcome shown. "Tests pass" with nothing
-observable named is not a strategy.]
+Focused: `uv run pytest tests/roadmap/provider/test_retry_success.py -q` → 2 passed.
+
+Full: `uv run pytest -q` → 57 passed.
+
+Lint: `uv run pylint app tests` → 10.00/10.
+
+Integration script: `bash scripts/check.sh` → exit 0 (pytest then pylint).
+
+All commands run 2026-11-11 on branch `4ce31f6`.
 
 **Toolkit**
 
-- Tool:
-- What it produced:
-- Difficulties:
-- What changed:
+- Tool: ship-manifest commands (same list as CONTRIBUTING.md)
+- What it produced: green manifest run in ship-gate before pr-precheck stop
+- Difficulties: pr-precheck inside ship-gate needs Claude login
+- What changed: opened PR manually after manifest pass
 
 ---
 
 ## Implementation Notes
 
-[A running log, added to as you work. Date each entry. What you
-built, decisions you made when you made them, wrong turns included.]
+**2026-11-11**
 
-**[Date]**
+Forked `ashrafee-dev/scamshield-api`, installed uv, added roadmap provider test file, ran full
+suite locally. Committed `4ce31f6`, pushed branch, opened upstream PR #377.
 
-[Entry]
+**2026-11-11**
 
-**[Date]**
-
-[Entry]
+Installed voice guard, ship-gate, PR monitor; wrote contribution story and kept claim draft local
+pending personal review.
 
 **Toolkit**
 
-- Tool:
-- What it produced:
-- Difficulties:
-- What changed:
+- Tool: Cursor agent session (AI-assisted edits; I ran tests and reviewed diff)
+- What it produced: single-file PR and tool installations
+- Difficulties: Claude CLI auth blocks voice-guard manual check, pr-precheck, full PR monitor
+- What changed: disclosed AI use in PR body and claim draft
 
 ---
 
 ## Pull Request
 
-**PR Link:** [GitHub PR URL when opened]
+**PR Link:** https://github.com/ashrafee-dev/scamshield-api/pull/377
 
-**PR Description:** [what the PR says; much of the content above
-adapts into it]
+**PR Description:** Adds mocked JSON retry success coverage for `get_assessment`, lists
+verification commands, discloses AI-assisted drafting with human verification per
+CONTRIBUTING.md, links `Fixes #200`.
 
 **Maintainer Feedback:**
 
-- [Date]: [feedback received, or "none yet"; silence is a normal
-  state and costs you nothing]
-- [Date]: [how you addressed it]
+- 2026-11-11: none yet
+- 2026-11-11: n/a
 
-**Status:** [Awaiting review / Iterating / Merged / Closed. The
-status is a fact you record, never a grade: the PR is graded as
-opened.]
+**Status:** Awaiting review
 
 **Toolkit**
 
-- Tool:
-- What it produced:
-- Difficulties:
-- What changed:
+- Tool: ship-gate (manifest checks) and `gh pr create` (pr-precheck step blocked on Claude auth)
+- What it produced: PR #377 opened against upstream `main`
+- Difficulties: ship-gate STOP at pr-precheck when OAuth expired
+- What changed: used `gh` directly after manifest checks passed
 
 ---
 
@@ -264,25 +286,24 @@ opened.]
 
 **Technical Skills Gained**
 
-[What you learned technically, named concretely.]
+Practiced uv-based Python 3.13 workflows, pytest mocking at service boundaries, and reading a
+small FastAPI service's assessment retry contract without changing runtime code.
 
 **Challenges Overcome**
 
-[What was hard and how you solved it; point at the real events, the
-Toolkit blocks above are full of them.]
+Installing tooling on a machine without uv, merging Claude Code hooks without duplicating the
+voice guard, and staying honest when Claude-backed course skills cannot run without `claude auth login`.
 
 **What I'd Do Differently Next Time**
 
-[Reflection on your process.]
+Run `claude auth login` before Unit 5 scan and Unit 7 ship-gate so voice-guard, pr-precheck, and
+PR monitor drafts go through the official paths instead of manual `gh` and `pytest` only.
 
 ---
 
 ## Resources Used
 
-[What actually helped, not a reading list. List things this story
-already shows you using: the doc you followed to set the environment
-up, the thread that explained the bug, the person who answered you.
-One real entry beats ten plausible ones.]
-
-- [Link to documentation that helped]
-- [Discussion, issue, or post that helped]
+- https://github.com/ashrafee-dev/scamshield-api/issues/200 — acceptance criteria and file path
+- https://github.com/ashrafee-dev/scamshield-api/blob/main/CONTRIBUTING.md — test and AI policy
+- https://github.com/ashrafee-dev/scamshield-api/blob/main/AGENTS.md — uv and check commands
+- CodePath starters: ai301-unit6/7/8-starter (install steps for voice guard, ship-gate, PR monitor)
