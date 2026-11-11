@@ -8,9 +8,8 @@ format criteria grade exactly that. Your course repo link is the whole submissio
 files and no evidence uploads are part of Assignment 5.
 
 **Contribution Number:** [1]
-**Student:** [Student name]
-**GitHub Username:** [your GitHub username, exactly as it appears on your profile - no @, no
-profile URL. Your comments upstream are identified by this name.]
+**Student:** Aryah Bhatnagar
+**GitHub Username:** AryahCodes
 **Issue:** [GitHub issue link]
 **Pull Request:** [GitHub PR link, once opened]
 
@@ -55,10 +54,17 @@ happened; these entries are the toolkit's own timeline.
 All four entries are graded. Keep every heading below, and fill each
 one in the week it belongs to.
 
-**Unit 5: [one line on the tool work]**
+**Unit 5: Upgraded issue-select into issue-scout for wild GitHub search**
 
-[2-4 sentences: what you built (the scout, your strategy), what broke
-or fell short, what changed because of it.]
+I overlaid the Unit 5 starter onto my Unit 1 rubric and evidence guide, moved the skill to
+`~/.claude/skills/issue-scout/`, and wrote a fit profile plus three `gh search issues`
+queries (Python with a stars filter, Python CLI tooling, and low-noise JavaScript GFIs). My
+first scan merged 300 hits; ranking by zero comments surfaced a lot of brand-new spam repos,
+so I patched the Python query to require `stars:>200`. Claude Code would not run because
+OAuth was expired, so I ran the same funnel with `gh` and saved real output in
+`scan-output.md`. The rubric rejected the agent-swarm puzzle issue and accepted two pysad
+issues; I picked `pysad#703` and `scamshield-api#200` as provisional wild candidates after
+direct grading.
 
 **Unit 6: [one line on the tool work]**
 
