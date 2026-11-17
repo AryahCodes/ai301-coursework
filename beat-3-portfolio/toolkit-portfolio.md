@@ -1,118 +1,84 @@
+[toolkit-portfolio.md](https://github.com/user-attachments/files/35000202/toolkit-portfolio.md)
 # Toolkit Portfolio
 
-Path: `beat-3-portfolio/toolkit-portfolio.md`
-
-This file is Assignment 6, and it is graded at the path above; a copy kept anywhere else in
-the repository is not read. It has been waiting here since you created the repo in unit 1;
-unit 9 is when you write it.
-
-**Only this page is read.** Your `tools/` folders and your installed skill folders are never
-opened, so every piece of evidence you want seen has to live inline here: an output excerpt,
-a before/after pair, a dated commit reference.
-
-**Write every sentence yourself.** AI may gather diffs, dates and excerpts for you; it does
-not draft entries.
-
-**Keep every section header below under its exact name** — Featured Tools, Inventory, The
-Arc, and Limitations and What's Next. Feature three or four tools, each in the entry shape
-shown below; give every other tool one inventory line.
-
-**Some lines below are labelled, and the label is how they are read.** Three places on this
-page use a `Label: your words` shape — the arc's beats, the tool-limits list, and nothing
-else. Keep those labels exactly as written, one per line, and never delete a labelled line:
-where you have nothing to put after a label, write `none` and move on. A deleted label reads
-as a deleted answer.
-
-**Before you finish**, replace every `[bracketed prompt]` with your own words, then delete
-the unused `[Tool name]` entry stub, its copy-me sentence, and the prompt sentences under
-each header. A leftover bracketed prompt reads as unfilled.
-
-**Student:** [Student name]
+**Student:** Aryahvishwa Babu
 
 ## Featured Tools
 
-Three or four tools, presented in depth. Open with a few sentences
-on why you chose these.
+My toolkit helped me find an issue, reproduce a bug, and plan a fix. These three tools stand out because I changed their rules after finding problems.
 
-Full credit asks the featured set to show real change: **at least two** of your featured
-entries should show a tool that visibly moved through use. An honest entry for a tool that
-barely changed — saying so, dating what did happen, and giving the reason — earns the solid
-middle tier and never fails you.
+**repro-check**
 
-Each tool's honest limit is not written here. It goes in the tool-limits list at the
-bottom of this page, one line per featured tool, so that the limits sit together and can be
-read as a set.
+**What it is, and the judgment hole I wrote:** This tool checks whether a bug report has repeatable steps and real evidence. I wrote its rules for exact inputs, honest results, and AI disclosure.
 
-[Why these tools, in your own words.]
+**How it evolved, dated:** In October 2026, it rejected good reports for missing unimportant setup details. I changed the rubric to require the exact input that triggers a bug, not every unrelated detail.
 
-Copy the entry shape below once per featured tool and fill it there.
+**Evidence:** My first full evaluation scored **13/20**; the final saved evaluation scored **20/20**. My [PathReview reproduction](https://github.com/AryahCodes/ai301-coursework/blob/main/beat-1-sandbox/unit-2/reproduction.md) showed:
 
-**[Tool name]**
+```text
+200 requests: 200 HTTP 200
+check_rate_limit calls observed: 0
+```
 
-**What it is, and the judgment hole I wrote:** [what the tool does,
-and the part of it that is your judgment: the rubric, strategy,
-guide, manifest, or playbook you wrote.]
+**plan-check**
 
-**How it evolved, dated:** [the changes that made it yours, each
-with its date and the friction that drove it; your weekly Toolkit
-entries are the source.]
+**What it is, and the judgment hole I wrote:** It reviews whether a fix plan follows the evidence, includes testable steps, and identifies unknowns. I wrote those checks into its rubric.
 
-**Evidence:** [show, don't claim: an output excerpt, a before/after
-pair, or a dated commit reference, inline here. Draw it from your real
-term work where you can - a catch this tool actually made, a
-before/after from your own repo or PR - which is graded separately from
-whether an artifact is present at all. A short, telling excerpt beats a
-pasted transcript.]
+**How it evolved, dated:** In October 2026, it rejected plans even when claims were supported by code or issue comments. I adjusted the rules to separate supported claims from guesses.
+
+**Evidence:** Its saved evaluation also improved from **13/20 to 20/20**. My [PathReview plan](https://github.com/AryahCodes/ai301-coursework/blob/main/beat-1-sandbox/unit-3/plan-and-implement.md) included a concurrency test:
+
+```text
+20 parallel requests; limit 10
+Before: 16 allowed, 4 blocked
+After Lua fix: 10 allowed, 10 blocked
+```
+
+**issue-scout**
+
+**What it is, and the judgment hole I wrote:** It searches GitHub and ranks issues based on my fit profile and scope rules.
+
+**How it evolved, dated:** In November 2026, its first search collected 300 issues but surfaced spam repositories. I added a `stars:>200` filter and later a `scope-feasible` rule. With Claude authentication expired, I searched using GitHub CLI.
+
+**Evidence:** The updated search helped me select [ScamShield issue #200](https://github.com/ashrafee-dev/scamshield-api/issues/200). I later opened [PR #377](https://github.com/ashrafee-dev/scamshield-api/pull/377), adding tests for retrying after malformed JSON.
 
 ## Inventory
 
-One line each for the rest of the toolkit: what it is and where it
-stands (one bullet per tool; a compact sentence or two is fine).
-
-- [Tool name: one line.]
+- **issue-select:** The original issue-selection rubric used for PathReview #34.
+- **pr-precheck:** PR checklist; its live check was blocked by Claude authentication.
+- **voice-guard:** Writing guide and hook installed; manual checking was blocked.
+- **ship-gate:** Five ScamShield manifest checks passed, but pr-precheck stopped on authentication.
+- **pr-monitor:** My 14/28/45-day follow-up playbook; PR #377 showed no review, so I sent no nudge.
 
 ## The Arc
 
-The story of the toolkit in order: friction, change, result, dated.
-Your weekly Toolkit entries are the source; read your own record and
-tell it oldest first.
-
-Write one block per beat, in the shape below, oldest first. Keep all four labels on every
-beat, each on its own line. The `Result:` line is what the beat was for: it says what
-happened *after* the change, which is not the same sentence as the change itself. If a beat
-never reached a result, write `Result: none` — an honest beat that did not land still counts
-fully as a beat.
-
-Full credit asks for **at least two** beats whose `Result:` line names something that
-actually happened afterwards. A beat about something that did not work counts fully as a
-beat, and when the work happened never moves this score.
-
 **Beat 1**
-Date: [a date, or a month and year]
-Friction: [what was going wrong, and how you noticed]
-Change: [what you changed because of it]
-Result: [what happened afterwards, or the word none]
+
+Date: October 2026  
+Friction: repro-check rejected valid reports.  
+Change: I revised its evidence requirements.  
+Result: The saved score increased from 13/20 to 20/20.
 
 **Beat 2**
-Date: [a date, or a month and year]
-Friction: [what was going wrong, and how you noticed]
-Change: [what you changed because of it]
-Result: [what happened afterwards, or the word none]
 
-Copy the beat shape above for as many beats as your term had.
+Date: October 2026  
+Friction: plan-check treated supported claims like guesses.  
+Change: I refined its honesty and steps checks.  
+Result: The saved score increased from 13/20 to 20/20.
+
+**Beat 3**
+
+Date: November 2026  
+Friction: issue-scout surfaced spam and Claude could not run.  
+Change: I filtered searches and used GitHub CLI.  
+Result: I found ScamShield #200 and opened PR #377 after testing.
 
 ## Limitations and What's Next
 
-What the toolkit as a whole still does not do, and what you would
-build or change next. Write this section last; it will be better
-after the rest.
+The two perfect evaluation scores were on examples I had already used to tune the rubrics. They do not prove the tools will work as well on new cases. Next, I would test unseen issues and restore Claude access for the blocked checks.
 
-[The honest limits, and what comes next, in your own sentences.]
+**Tool limits**
 
-**Tool limits.** One line per featured tool, in the same order as the entries above, naming
-where that tool still stops or what it still gets wrong. A small honest limit is full credit;
-"none really" is not a limit. If a tool genuinely has none you can name, write `none` after
-its label rather than deleting the line.
-
-issue-scout: [where this tool still stops, in plain words, or the word none]
-[tool name]: [where this tool still stops, in plain words, or the word none]
+repro-check: Needs evaluation on unseen reports.  
+plan-check: Needs evaluation on unseen plans.  
+issue-scout: Filtering by stars may miss good smaller projects.
